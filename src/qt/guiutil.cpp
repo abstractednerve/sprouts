@@ -3,13 +3,20 @@
 #include "walletmodel.h"
 #include "bitcoinunits.h"
 
+#include "util.h"
+#include "init.h"
+
 #include <QString>
 #include <QDateTime>
 #include <QDoubleValidator>
 #include <QFont>
 #include <QLineEdit>
+#if QT_VERSION >= 0x050000
+#include <QUrlQuery>
+#else
 #include <QUrl>
-#include <QTextDocument> // For Qt::escape
+#endif
+#include <QTextDocument> // for Qt::mightBeRichText
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QClipboard>
@@ -60,7 +67,13 @@ bool parseBitcoinURI(const QUrl &uri, SendCoinsRecipient *out)
     SendCoinsRecipient rv;
     rv.address = uri.path();
     rv.amount = 0;
+   
+#if QT_VERSION < 0x050000
     QList<QPair<QString, QString> > items = uri.queryItems();
+#else
+    QUrlQuery uriQuery(uri);
+    QList<QPair<QString, QString> > items = uriQuery.queryItems();
+#endif
     for (QList<QPair<QString, QString> >::iterator i = items.begin(); i != items.end(); i++)
     {
         bool fShouldReturnFalse = false;
@@ -105,7 +118,7 @@ bool parseBitcoinURI(QString uri, SendCoinsRecipient *out)
     //    which will lowercase it (and thus invalidate the address).
     if(uri.startsWith("sprouts://"))
     {
-        uri.replace(0, 9, "sprouts:");
+      uri.replace(0, std::string("sprouts://").length(), "sprouts:");
     }
     QUrl uriInstance(uri);
     return parseBitcoinURI(uriInstance, out);
@@ -113,7 +126,11 @@ bool parseBitcoinURI(QString uri, SendCoinsRecipient *out)
 
 QString HtmlEscape(const QString& str, bool fMultiLine)
 {
+#if QT_VERSION < 0x050000
     QString escaped = Qt::escape(str);
+#else
+    QString escaped = str.toHtmlEscaped();
+#endif
     if(fMultiLine)
     {
         escaped = escaped.replace("\n", "<br>\n");
@@ -148,7 +165,11 @@ QString getSaveFileName(QWidget *parent, const QString &caption,
     QString myDir;
     if(dir.isEmpty()) // Default to user documents location
     {
+#if QT_VERSION < 0x050000
         myDir = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
+#else
+    QString myDir = GetDataDir().string().c_str();
+#endif
     }
     else
     {

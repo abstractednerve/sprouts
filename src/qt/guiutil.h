@@ -2,6 +2,8 @@
 #define GUIUTIL_H
 
 #include <QString>
+#include <QObject>
+#include <QMessageBox>
 
 QT_BEGIN_NAMESPACE
 class QFont;

@@ -16,6 +16,7 @@ class SignVerifyMessageDialog;
 class MultisigDialog;
 class Notificator;
 class RPCConsole;
+class BlockBrowser;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -58,7 +59,7 @@ protected:
 private:
     ClientModel *clientModel;
     WalletModel *walletModel;
-
+    BlockBrowser *blockBrowser;
     QStackedWidget *centralWidget;
 
     OverviewPage *overviewPage;
@@ -97,6 +98,7 @@ private:
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
 
+    QAction *blockAction;
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
     TransactionView *transactionView;
@@ -146,6 +148,8 @@ private slots:
     void gotoOverviewPage();
     /** Switch to history (transactions) page */
     void gotoHistoryPage();
+    /** Switch to block browser page */
+    void gotoBlockBrowser();
     /** Switch to minting page */
     void gotoMintingPage();
     /** Switch to address book page */

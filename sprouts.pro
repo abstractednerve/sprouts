@@ -4,7 +4,30 @@ VERSION = 0.4.2.2
 INCLUDEPATH += src src/json src/qt
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE USE_IPV6
 CONFIG += no_include_pwd
+CONFIG += thread
+CONFIG += release
+CONFIG += qt_framework
+QT += core gui network
+CONFIG += link_pkgconfig
 
+isEmpty(BDB_LIB_SUFFIX) {
+	# !macx:unix:BDB_LIB_SUFFIX = -5.3
+	windows:macx:BDB_LIB_SUFFIX = -4.8
+}
+
+exists( /usr/local/Cellar/* ) {
+      message( "Configuring for homebrew..." )
+      CONFIG += brew
+}
+
+!windows:!unix {
+    CONFIG += static
+}
+
+greaterThan(QT_MAJOR_VERSION, 4) {
+    QT += widgets
+    DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0
+}
 
 # for boost 1.37, add -mt to the boost libraries 
 # use: qmake BOOST_LIB_SUFFIX=-mt
@@ -12,9 +35,45 @@ CONFIG += no_include_pwd
 # use: BOOST_THREAD_LIB_SUFFIX=_win32-...
 # or when linking against a specific BerkelyDB version: BDB_LIB_SUFFIX=-4.8
 
-# Dependency library locations can be customized with BOOST_INCLUDE_PATH, 
-#    BOOST_LIB_PATH, BDB_INCLUDE_PATH, BDB_LIB_PATH
-#    OPENSSL_INCLUDE_PATH and OPENSSL_LIB_PATH respectively
+# Dependency library locations can be customized with:
+#    BOOST_INCLUDE_PATH, BOOST_LIB_PATH, BDB_INCLUDE_PATH,
+#    BDB_LIB_PATH, OPENSSL_INCLUDE_PATH and OPENSSL_LIB_PATH respectively
+
+
+# winbuild dependencies
+windows {
+    contains(MXE, 1) {
+        BDB_INCLUDE_PATH=/usr/lib/mxe/usr/i686-w64-mingw32.static/include
+        BDB_LIB_PATH=/usr/lib/mxe/usr/i686-w64-mingw32.static/lib
+        BOOST_INCLUDE_PATH=/usr/lib/mxe/usr/i686-w64-mingw32.static/include/boost
+        BOOST_LIB_PATH=/usr/lib/mxe/usr/i686-w64-mingw32.static/lib
+        BOOST_LIB_SUFFIX=-mt
+        BOOST_THREAD_LIB_SUFFIX=_win32-mt
+        CXXFLAGS=-std=gnu++11 -march=i686
+        LDFLAGS=-march=i686
+        MINIUPNPC_INCLUDE_PATH=/usr/lib/mxe/usr/i686-w64-mingw32.static/include
+        MINIUPNPC_LIB_PATH=/usr/lib/mxe/usr/i686-w64-mingw32.static/lib
+        OPENSSL_INCLUDE_PATH=/usr/lib/mxe/usr/i686-w64-mingw32.static/include/openssl
+        OPENSSL_LIB_PATH=/usr/lib/mxe/usr/i686-w64-mingw32.static/lib
+        PATH=/usr/lib/mxe/usr/bin:/home/gjh/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+        QMAKE_LRELEASE=/usr/lib/mxe/usr/i686-w64-mingw32.static/qt5/bin/lrelease
+        QTDIR=/usr/lib/mxe/usr/i686-w64-mingw32.static/qt5
+    }else{
+        lessThan(QT_VERSION, 5.4) {
+    		BOOST_LIB_SUFFIX=-mgw48-mt-s-1_55
+    	} else {
+    		BOOST_LIB_SUFFIX=-mgw49-mt-s-1_55
+    	}
+    	BOOST_INCLUDE_PATH=C:/deps/boost_1_55_0
+    	BOOST_LIB_PATH=C:/deps/boost_1_55_0/stage/lib
+    	BDB_INCLUDE_PATH=C:/deps/db-4.8.30.NC/build_unix
+    	BDB_LIB_PATH=C:/deps/db-4.8.30.NC/build_unix
+    	OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1i/include
+    	OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1i
+    	MINIUPNPC_INCLUDE_PATH=C:/deps
+    	MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
+    }
+}
 
 OBJECTS_DIR = build
 MOC_DIR = build
@@ -22,8 +81,17 @@ UI_DIR = build
 
 # use: qmake "RELEASE=1"
 contains(RELEASE, 1) {
-    # Mac: compile for maximum compatibility (10.6, 64-bit)
-    macx:QMAKE_CXXFLAGS += -mmacosx-version-min=10.6 -arch x86_64 -isysroot /Developer/SDKs/MacOSX10.6.sdk
+    # Tested with MacOS Sierra, using QT 5.7.0 because previous versions
+    # are not supported. QT 5.7.0 requires C++11 support and in order to
+    # build QT 5.7.0 with Homebrew, the full version of Xcode must be
+    # installed, not just the command-line tools. Grab Xcode free from
+    # the Apple Developer site and install it before continuing with
+    # the below. Xcode 8.2_beta is used here.
+
+    macx:QMAKE_CXXFLAGS += -mmacosx-version-min=10.12 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk
+    macx:QMAKE_CFLAGS += -mmacosx-version-min=10.12 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk
+    macx:QMAKE_LFLAGS += -mmacosx-version-min=10.12 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk
+    macx:QMAKE_OBJECTIVE_CFLAGS += -mmacosx-version-min=10.12 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk
 
     !windows:!macx {
         # Linux: static link
@@ -53,7 +121,7 @@ contains(USE_UPNP, -) {
     DEFINES += USE_UPNP=$$USE_UPNP STATICLIB
     INCLUDEPATH += $$MINIUPNPC_INCLUDE_PATH
     LIBS += $$join(MINIUPNPC_LIB_PATH,,-L,) -lminiupnpc
-    win32:LIBS += -liphlpapi
+    windows:LIBS += -liphlpapi
 }
 
 # use: qmake "USE_DBUS=1"
@@ -169,6 +237,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/ui_interface.h \
     src/qt/rpcconsole.h \
     src/kernel.h \
+    src/qt/blockbrowser.h \
     src/qt/mintingview.h \
     src/qt/mintingtablemodel.h \
     src/qt/mintingfilterproxy.h \
@@ -228,6 +297,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/sendcoinsentry.cpp \
     src/qt/qvalidatedlineedit.cpp \
     src/qt/bitcoinunits.cpp \
+    src/qt/blockbrowser.cpp \
     src/qt/qvaluecombobox.cpp \
     src/qt/askpassphrasedialog.cpp \
     src/protocol.cpp \
@@ -259,6 +329,7 @@ FORMS += \
     src/qt/forms/sendcoinsentry.ui \
     src/qt/forms/askpassphrasedialog.ui \
     src/qt/forms/rpcconsole.ui \
+    src/qt/forms/blockbrowser.ui \
     src/qt/forms/multisigaddressentry.ui \
     src/qt/forms/multisiginputentry.ui \
     src/qt/forms/multisigdialog.ui
